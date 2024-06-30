@@ -65,7 +65,7 @@ bool SendMatsAction::Execute(Event event) {
         item->SaveToDB(trans);
         draft.AddItem(item);
         draft.SendMailTo(trans, MailReceiver(receiver), MailSender(bot));
-        bot->Whisper("Sent mail to " + receiver->GetName(), LANG_UNIVERSAL, receiver);
+        bot->Whisper("Sent mail to " + receiver->GetName() + " with " + item->GetTemplate()->Name1, LANG_UNIVERSAL, receiver);
 
         CharacterDatabase.CommitTransaction(trans);
 
