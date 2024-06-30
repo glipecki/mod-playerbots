@@ -51,6 +51,7 @@
 #include "SellAction.h"
 #include "SetCraftAction.h"
 #include "SendMailAction.h"
+#include "SendMatsAction.h"
 #include "SetHomeAction.h"
 #include "ShareQuestAction.h"
 #include "SkipSpellsListAction.h"
@@ -150,6 +151,7 @@ class ChatActionContext : public NamedObjectContext<Action>
             creators["formation"] = &ChatActionContext::formation;
             creators["stance"] = &ChatActionContext::stance;
             creators["sendmail"] = &ChatActionContext::sendmail;
+            creators["sendmats"] = &ChatActionContext::send_mats;
             creators["mail"] = &ChatActionContext::mail;
             creators["go"] = &ChatActionContext::go;
             creators["debug"] = &ChatActionContext::debug;
@@ -184,6 +186,7 @@ class ChatActionContext : public NamedObjectContext<Action>
         static Action* mail(PlayerbotAI* botAI) { return new MailAction(botAI); }
         static Action* go(PlayerbotAI* botAI) { return new GoAction(botAI); }
         static Action* sendmail(PlayerbotAI* botAI) { return new SendMailAction(botAI); }
+        static Action* send_mats(PlayerbotAI* botAI) { return new SendMatsAction(botAI); }
         static Action* formation(PlayerbotAI* botAI) { return new SetFormationAction(botAI); }
         static Action* stance(PlayerbotAI* botAI) { return new SetStanceAction(botAI); }
         static Action* tell_attackers(PlayerbotAI* botAI) { return new TellAttackersAction(botAI); }
