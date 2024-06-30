@@ -56,17 +56,17 @@ bool SendMatsAction::Execute(Event event) {
         mailBody << "Here are the mats you asked for.";
         mailBody << "Name: " << item->GetTemplate()->Name1 << "\n";
         mailBody << "ID: " << item->GetTemplate()->ItemId << "\n";
-        mailBody << "Class" << item->GetTemplate()->Class << "\n";
-        mailBody << "SubClass" << item->GetTemplate()->SubClass << "\n";
-        mailBody << "Bonding" << item->GetTemplate()->Bonding << "\n";
-        mailBody << "IsSoulBound" << item->IsSoulBound() << "\n";
-        mailBody << "IsBoundAccountWide" << item->IsBoundAccountWide() << "\n";
-        mailBody << "IsBoundByEnchant" << item->IsBoundByEnchant() << "\n";
-        mailBody << "IsLocked" << item->IsLocked() << "\n";
-        mailBody << "IsCurrencyToken" << item->IsCurrencyToken() << "\n";
-        mailBody << "CanBeTraded(mail)" << item->CanBeTraded(true) << "\n";
-        mailBody << "CanBeTraded(trade)" << item->CanBeTraded(false, true) << "\n";
-        mailBody << "IsConjuredConsumable(trade)" << item->IsConjuredConsumable() << "\n";
+        mailBody << "Class: " << item->GetTemplate()->Class << "\n";
+        mailBody << "SubClass: " << item->GetTemplate()->SubClass << "\n";
+        mailBody << "Bonding: " << item->GetTemplate()->Bonding << "\n";
+        mailBody << "IsSoulBound: " << item->IsSoulBound() << "\n";
+        mailBody << "IsBoundAccountWide: " << item->IsBoundAccountWide() << "\n";
+        mailBody << "IsBoundByEnchant: " << item->IsBoundByEnchant() << "\n";
+        mailBody << "IsLocked: " << item->IsLocked() << "\n";
+        mailBody << "IsCurrencyToken: " << item->IsCurrencyToken() << "\n";
+        mailBody << "CanBeTraded(mail): " << item->CanBeTraded(true) << "\n";
+        mailBody << "CanBeTraded(trade): " << item->CanBeTraded(false, true) << "\n";
+        mailBody << "IsConjuredConsumable(trade): " << item->IsConjuredConsumable() << "\n";
         mailBody << "\n\n";
         mailBody << bot->GetName() << "\n";
 
