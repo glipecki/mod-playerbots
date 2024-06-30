@@ -42,14 +42,18 @@ bool SendMatsAction::Execute(Event event) {
     GetTradeSkillMatsVisitor visitor;
     IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
 
+    std::vector<Item*> items = visitor.GetResult();
+
     std::ostringstream mailBody;
     mailBody << "Hello, " << receiver->GetName() << ",\n";
     mailBody << "\n";
     mailBody << "Here are the mats you asked for";
     mailBody << "\n";
     mailBody << bot->GetName() << "\n";
-
     MailDraft draft("Mats you asked for", mailBody.str());
+
+    const int limit = 5;
+    int count = 0;
     for (Item* item : visitor.GetResult()) {
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
@@ -63,6 +67,10 @@ bool SendMatsAction::Execute(Event event) {
         CharacterDatabase.CommitTransaction(trans);
 
         bot->Whisper("Sent mail to " + receiver->GetName(), LANG_UNIVERSAL, receiver);
+        if (++count > limit) {
+            bot->Whisper("I've stopped after item limit, got more items to send (" + std::to_string(items.size() - limit) + ")", LANG_UNIVERSAL, receiver);
+            return true;
+        }
     }
 
     return true;
