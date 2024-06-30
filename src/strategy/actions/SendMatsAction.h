@@ -6,6 +6,7 @@
 #define _PLAYERBOT_SENDMATSACTION_H
 
 #include "InventoryAction.h"
+#include "Mail.h"
 
 class PlayerbotAI;
 
