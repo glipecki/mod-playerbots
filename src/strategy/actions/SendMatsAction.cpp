@@ -12,6 +12,7 @@ public:
 
     bool Accept(ItemTemplate const* itemTemplate) override {
         switch (itemTemplate->Class)
+      // todo: nie wysyłaj soulbound? quest? itp?
         {
             case ITEM_CLASS_TRADE_GOODS:
             case ITEM_CLASS_MISC:
@@ -48,28 +49,25 @@ bool SendMatsAction::Execute(Event event) {
     mailBody << "Hello, " << receiver->GetName() << ",\n";
     mailBody << "\n";
     mailBody << "Here are the mats you asked for";
-    mailBody << "\n";
+    mailBody << "\n\n";
     mailBody << bot->GetName() << "\n";
-    MailDraft draft("Mats you asked for", mailBody.str());
 
     const int limit = 5;
     int count = 0;
+
     for (Item* item : visitor.GetResult()) {
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-
+        MailDraft draft("Mats you asked for: " + item->GetTemplate()->Name1, mailBody.str());
         bot->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
         item->DeleteFromInventoryDB(trans);
         item->SetOwnerGUID(receiver->GetGUID());
         item->SaveToDB(trans);
         draft.AddItem(item);
         draft.SendMailTo(trans, MailReceiver(receiver), MailSender(bot));
-
-        CharacterDatabase.CommitTransaction(trans);
-
         bot->Whisper("Sent mail to " + receiver->GetName(), LANG_UNIVERSAL, receiver);
+        CharacterDatabase.CommitTransaction(trans);
         if (++count > limit) {
             bot->Whisper("I've stopped after item limit, got more items to send (" + std::to_string(items.size() - limit) + ")", LANG_UNIVERSAL, receiver);
-            return true;
         }
     }
 
