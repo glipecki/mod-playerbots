@@ -15,7 +15,6 @@ class SendMatsAction : public InventoryAction
         SendMatsAction(PlayerbotAI* botAI) : InventoryAction(botAI, "sendmats") { }
 
         bool Execute(Event event) override;
-        bool IsItemUsefulForSkill(ItemTemplate const* proto);
 };
 
 #endif

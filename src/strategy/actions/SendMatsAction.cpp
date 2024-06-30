@@ -5,13 +5,23 @@
 #include "ChatHelper.h"
 #include "Playerbots.h"
 
-class GetAllItemsVisitor : public FindItemVisitor
+class GetTradeSkillMatsVisitor : public FindItemVisitor
 {
 public:
-    GetAllItemsVisitor() { }
+    GetTradeSkillMatsVisitor() { }
 
     bool Accept(ItemTemplate const* itemTemplate) override {
-        return true;
+        switch (itemTemplate->Class)
+        {
+            case ITEM_CLASS_TRADE_GOODS:
+            case ITEM_CLASS_MISC:
+            case ITEM_CLASS_REAGENT:
+            case ITEM_CLASS_GEM:
+            case ITEM_CLASS_RECIPE:
+                return true;
+            default:
+                return false;
+        }
     }
 };
 
@@ -29,47 +39,31 @@ bool SendMatsAction::Execute(Event event) {
 
     bot->Whisper("Got it, i'll send you mats!", LANG_UNIVERSAL, receiver);
 
-    GetAllItemsVisitor visitor;
+    GetTradeSkillMatsVisitor visitor;
     IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
-    for (Item* item : visitor.GetResult()) {
-          if (this->IsItemUsefulForSkill(item->GetTemplate())) {
-              std::stringstream message;
-              message << "Found: " << item->GetTemplate()->Name1 << " x" << std::to_string(item->GetCount()) << " (" << std::to_string(item->GetTemplate()->ItemId) << ")";
-//              message << "Class: " << std::to_string(item->GetTemplate()->Class) << ", ";
-//              message << "SubClass: " << std::to_string(item->GetTemplate()->SubClass) << ")";
-//              message << "ITEM_CLASS_REAGENT? " << ((item->GetTemplate()->Class & ITEM_CLASS_REAGENT) > 0) << ", ";
-              //        message << "ITEM_CLASS_TRADE_GOODS: " << (item->GetTemplate()->Class & ITEM_CLASS_TRADE_GOODS) << ", ";
-              //        message << "ITEM_CLASS_RECIPE: " << (item->GetTemplate()->Class & ITEM_CLASS_RECIPE) << "";
-              bot->Whisper(
-                message.str(),
-                LANG_UNIVERSAL,
-                receiver
-              );
-          }
-    }
 
-//    std::ostringstream body;
-//    body << "Hello, " << receiver->GetName() << "," << std::endl;
-//    body << std::endl;
-//    body << "Here are the mats you asked for" << std::endl;
-//    body << "Thanks," << std::endl;
-//    body << bot->GetName() << std::endl;
-//
-//    MailDraft draft("Mats you asked for", body.str());
+    std::ostringstream mailBody;
+    mailBody << "Hello, " << receiver->GetName() << ",\n";
+    mailBody << "\n";
+    mailBody << "Here are the mats you asked for";
+    mailBody << "\n";
+    mailBody << bot->GetName() << "\n";
+
+    MailDraft draft("Mats you asked for", mailBody.str());
+    for (Item* item : visitor.GetResult()) {
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
+        bot->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
+        item->DeleteFromInventoryDB(trans);
+        item->SetOwnerGUID(receiver->GetGUID());
+        item->SaveToDB(trans);
+        draft.AddItem(item);
+        draft.SendMailTo(trans, MailReceiver(receiver), MailSender(bot));
+
+        CharacterDatabase.CommitTransaction(trans);
+
+        bot->Whisper("Sent mail to " + receiver->GetName(), LANG_UNIVERSAL, receiver);
+    }
 
     return true;
-}
-
-bool SendMatsAction::IsItemUsefulForSkill(ItemTemplate const* proto)
-{
-    switch (proto->Class)
-    {
-        case ITEM_CLASS_TRADE_GOODS:
-        case ITEM_CLASS_MISC:
-        case ITEM_CLASS_REAGENT:
-        case ITEM_CLASS_GEM:
-        case ITEM_CLASS_RECIPE:
-            return true;
-    }
-    return false;
 }
