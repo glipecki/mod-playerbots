@@ -68,25 +68,8 @@ bool SendMatsAction::IsItemUsefulForSkill(ItemTemplate const* proto)
         case ITEM_CLASS_MISC:
         case ITEM_CLASS_REAGENT:
         case ITEM_CLASS_GEM:
-        {
-            return true;
-        }
         case ITEM_CLASS_RECIPE:
-        {
-            switch (proto->SubClass)
-            {
-                case ITEM_SUBCLASS_LEATHERWORKING_PATTERN:
-                case ITEM_SUBCLASS_TAILORING_PATTERN:
-                case ITEM_SUBCLASS_ENGINEERING_SCHEMATIC:
-                case ITEM_SUBCLASS_BLACKSMITHING:
-                case ITEM_SUBCLASS_COOKING_RECIPE:
-                case ITEM_SUBCLASS_ALCHEMY_RECIPE:
-                case ITEM_SUBCLASS_FIRST_AID_MANUAL:
-                case ITEM_SUBCLASS_ENCHANTING_FORMULA:
-                case ITEM_SUBCLASS_FISHING_MANUAL:
-                    return true;
-            }
-        }
+            return true;
     }
     return false;
 }
