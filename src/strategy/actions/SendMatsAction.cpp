@@ -11,7 +11,8 @@ public:
     FindItemByFlagVisitor(uint32 flag) : flag(flag) { }
 
     bool Accept(ItemTemplate const* itemTemplate) override {
-          return itemTemplate->Flags2 & flag;
+//          return itemTemplate->Flags2 & flag;
+        return true;
     }
 
 private:
@@ -35,7 +36,7 @@ bool SendMatsAction::Execute(Event event) {
     FindItemByFlagVisitor visitor(ITEM_FLAG2_USED_IN_A_TRADESKILL);
     IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
     for (Item* item : visitor.GetResult()) {
-        bot->Whisper("Found: " + std::to_string(item->GetTemplate()->ItemId), LANG_UNIVERSAL, receiver);
+        bot->Whisper("Found: " + item->GetTemplate()->Name1 + " (" + std::to_string(item->GetTemplate()->ItemId) + ")", LANG_UNIVERSAL, receiver);
     }
 
 //    std::ostringstream body;
