@@ -57,6 +57,7 @@ bool SendMatsAction::Execute(Event event) {
 
     for (Item* item : visitor.GetResult()) {
         CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+
         MailDraft draft("Mats you asked for: " + item->GetTemplate()->Name1, mailBody.str());
         bot->MoveItemFromInventory(item->GetBagSlot(), item->GetSlot(), true);
         item->DeleteFromInventoryDB(trans);
@@ -65,9 +66,12 @@ bool SendMatsAction::Execute(Event event) {
         draft.AddItem(item);
         draft.SendMailTo(trans, MailReceiver(receiver), MailSender(bot));
         bot->Whisper("Sent mail to " + receiver->GetName(), LANG_UNIVERSAL, receiver);
+
         CharacterDatabase.CommitTransaction(trans);
+
         if (++count > limit) {
             bot->Whisper("I've stopped after item limit, got more items to send (" + std::to_string(items.size() - limit) + ")", LANG_UNIVERSAL, receiver);
+            return true;
         }
     }
 
