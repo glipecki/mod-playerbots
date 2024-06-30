@@ -36,15 +36,25 @@ bool SendMatsAction::Execute(Event event) {
     FindItemByFlagVisitor visitor(ITEM_FLAG2_USED_IN_A_TRADESKILL);
     IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
     for (Item* item : visitor.GetResult()) {
+        std::stringstream falgsss;
+        falgsss << std::hex << item->GetTemplate()->Flags;
+        std::string flags = falgsss.str();
+
+        std::stringstream falgsss2;
+        falgsss2 << std::hex << item->GetTemplate()->Flags;
+        std::string flags2 = falgsss2.str();
+
         bot->Whisper(
           "Found: "
               + item->GetTemplate()->Name1
               + " ("
               + std::to_string(item->GetTemplate()->ItemId)
               + ", Flags: "
-              + std::to_string(item->GetTemplate()->Flags)
+                + flags
+//              + std::to_string(item->GetTemplate()->Flags)
               + ", Flags2: "
-              + std::to_string(item->GetTemplate()->Flags2)
+                + flags2
+//              + std::to_string(item->GetTemplate()->Flags2)
               + ")",
           LANG_UNIVERSAL,
           receiver
