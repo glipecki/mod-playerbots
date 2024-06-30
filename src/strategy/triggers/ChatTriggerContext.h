@@ -93,6 +93,7 @@ class ChatTriggerContext : public NamedObjectContext<Trigger>
             creators["formation"] = &ChatTriggerContext::formation;
             creators["stance"] = &ChatTriggerContext::stance;
             creators["sendmail"] = &ChatTriggerContext::sendmail;
+            creators["sendmats"] = &ChatTriggerContext::sendmats;
             creators["mail"] = &ChatTriggerContext::mail;
             creators["outfit"] = &ChatTriggerContext::outfit;
             creators["go"] = &ChatTriggerContext::go;
@@ -134,6 +135,7 @@ class ChatTriggerContext : public NamedObjectContext<Trigger>
         static Trigger* outfit(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "outfit"); }
         static Trigger* mail(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "mail"); }
         static Trigger* sendmail(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "sendmail"); }
+        static Trigger* sendmats(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "sendmats"); }
         static Trigger* formation(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "formation"); }
         static Trigger* stance(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "stance"); }
         static Trigger* attackers(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "attackers"); }

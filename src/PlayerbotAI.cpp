@@ -533,6 +533,7 @@ bool PlayerbotAI::IsAllowedCommand(std::string const text)
         unsecuredCommands.insert("who");
         unsecuredCommands.insert("wts");
         unsecuredCommands.insert("sendmail");
+        unsecuredCommands.insert("sendmats");
         unsecuredCommands.insert("invite");
         unsecuredCommands.insert("leave");
     }

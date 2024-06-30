@@ -110,6 +110,7 @@ ChatCommandHandlerStrategy::ChatCommandHandlerStrategy(PlayerbotAI* botAI) : Pas
     supported.push_back("formation");
     supported.push_back("stance");
     supported.push_back("sendmail");
+    supported.push_back("sendmats");
     supported.push_back("mail");
     supported.push_back("outfit");
     supported.push_back("go");
