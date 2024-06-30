@@ -5,18 +5,14 @@
 #include "ChatHelper.h"
 #include "Playerbots.h"
 
-class FindItemByFlagVisitor : public FindItemVisitor
+class GetAllItemsVisitor : public FindItemVisitor
 {
 public:
-    FindItemByFlagVisitor(uint32 flag) : flag(flag) { }
+    GetAllItemsVisitor() { }
 
     bool Accept(ItemTemplate const* itemTemplate) override {
-//          return itemTemplate->Flags2 & flag;
         return true;
     }
-
-private:
-    uint32 flag;
 };
 
 bool SendMatsAction::Execute(Event event) {
@@ -33,29 +29,16 @@ bool SendMatsAction::Execute(Event event) {
 
     bot->Whisper("Got it, i'll send you mats!", LANG_UNIVERSAL, receiver);
 
-    FindItemByFlagVisitor visitor(ITEM_FLAG2_USED_IN_A_TRADESKILL);
+    GetAllItemsVisitor visitor;
     IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
     for (Item* item : visitor.GetResult()) {
-        std::stringstream falgsss;
-        falgsss << std::hex << item->GetTemplate()->Flags;
-        std::string flags = falgsss.str();
-
-        std::stringstream falgsss2;
-        falgsss2 << std::hex << item->GetTemplate()->Flags;
-        std::string flags2 = falgsss2.str();
-
+        std::stringstream message;
+        message << "Found: " << item->GetTemplate()->Name1 << " (" << std::to_string(item->GetTemplate()->ItemId) << ")";
+        message << "Class: " << std::to_string(item->GetTemplate()->Class) << ")";
+        message << "ITEM_CLASS_TRADE_GOODS: " << (item->GetTemplate()->Class & ITEM_CLASS_TRADE_GOODS) << ")";
+        message << "ITEM_CLASS_RECIPE: " << (item->GetTemplate()->Class & ITEM_CLASS_RECIPE) << ")";
         bot->Whisper(
-          "Found: "
-              + item->GetTemplate()->Name1
-              + " ("
-              + std::to_string(item->GetTemplate()->ItemId)
-              + ", Flags: "
-                + flags
-//              + std::to_string(item->GetTemplate()->Flags)
-              + ", Flags2: "
-                + flags2
-//              + std::to_string(item->GetTemplate()->Flags2)
-              + ")",
+          message.str(),
           LANG_UNIVERSAL,
           receiver
           );
