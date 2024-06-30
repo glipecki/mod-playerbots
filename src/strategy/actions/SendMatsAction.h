@@ -15,6 +15,11 @@ class SendMatsAction : public InventoryAction
         SendMatsAction(PlayerbotAI* botAI) : InventoryAction(botAI, "sendmats") { }
 
         bool Execute(Event event) override;
+    private:
+        GameObject* findMailbox();
+        std::vector<Item*> findSkillItems();
+        std::string mailBody(Player* receiver, Item* item);
+        void moveItem(Player* receiver, Item* item, MailDraft mail);
 };
 
 #endif
