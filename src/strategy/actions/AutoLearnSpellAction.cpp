@@ -6,6 +6,7 @@
 #include "Event.h"
 #include "PlayerbotFactory.h"
 #include "Playerbots.h"
+#include "GuildMgr.h"
 
 bool AutoLearnSpellAction::Execute(Event event)
 {
@@ -24,10 +25,8 @@ bool AutoLearnSpellAction::Execute(Event event)
         out << ".";
         botAI->TellMaster(out);
     }
-
     return true;
 }
-
 
 void AutoLearnSpellAction::LearnSpells(std::ostringstream* out)
 {
@@ -36,6 +35,21 @@ void AutoLearnSpellAction::LearnSpells(std::ostringstream* out)
 
     if (sPlayerbotAIConfig->autoLearnQuestSpells && sRandomPlayerbotMgr->IsRandomBot(bot))// || (!botAI->GetMaster() && sRandomPlayerbotMgr->IsRandomBot(bot)))
         LearnQuestSpells(out);
+
+    if (sPlayerbotAIConfig->randomBotTalk)
+    {
+        Guild* guild = sGuildMgr->GetGuildById(bot->GetGuildId());
+        if (guild)
+        {
+            std::map<std::string, std::string> placeholders;
+            placeholders["%level"] = std::to_string(bot->GetLevel());
+
+            if (urand(0, 3))
+                guild->BroadcastToGuild(bot->GetSession(), false, BOT_TEXT2("Ding!", placeholders), LANG_UNIVERSAL);
+            else
+                guild->BroadcastToGuild(bot->GetSession(), false, BOT_TEXT2("Yay level %level!", placeholders), LANG_UNIVERSAL);
+        }
+    }
 }
 
 void AutoLearnSpellAction::LearnTrainerSpells(std::ostringstream* out)
@@ -122,7 +136,7 @@ void AutoLearnSpellAction::LearnQuestSpells(std::ostringstream* out)
         if (!quest->GetRequiredClasses() || quest->IsRepeatable() || quest->GetMinLevel() < 10)
             continue;
 
-        if (!bot->SatisfyQuestClass(quest, false) || quest->GetMinLevel() > bot->getLevel() || !bot->SatisfyQuestRace(quest, false))
+        if (!bot->SatisfyQuestClass(quest, false) || quest->GetMinLevel() > bot->GetLevel() || !bot->SatisfyQuestRace(quest, false))
             continue;
 
         if (quest->GetRewSpellCast() > 0)
@@ -180,4 +194,16 @@ void AutoLearnSpellAction::LearnSpell(uint32 spellId, std::ostringstream* out)
             *out << FormatSpell(proto) << ", ";
         }
     }
+}
+
+bool AutoUpgradeEquipAction::Execute(Event event) {
+    if (!sPlayerbotAIConfig->autoUpgradeEquip || !sRandomPlayerbotMgr->IsRandomBot(bot)) {
+        return false;
+    }
+    PlayerbotFactory factory(bot, bot->GetLevel(), ITEM_QUALITY_RARE);
+    if (!sPlayerbotAIConfig->equipmentPersistence || bot->GetLevel() < sPlayerbotAIConfig->equipmentPersistenceLevel) {
+        factory.InitEquipment(true);
+    }
+    factory.InitAmmo();
+    return true;
 }

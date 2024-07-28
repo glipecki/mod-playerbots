@@ -54,8 +54,8 @@ class PlayerbotAIConfig
 
         bool enabled;
         bool allowGuildBots, allowPlayerBots;
-        uint32 globalCoolDown, reactDelay, maxWaitForMove, maxMovementSearchTime, expireActionTime, 
-            dispelAuraDuration, passiveDelay, repeatDelay,
+        uint32 globalCoolDown, reactDelay, maxWaitForMove, disableMoveSplinePath, maxMovementSearchTime,
+            expireActionTime, dispelAuraDuration, passiveDelay, repeatDelay,
             errorDelay, rpgDelay, sitDelay, returnDelay, lootDelay;
         float sightDistance, spellDistance, reactDistance, grindDistance, lootDistance, shootDistance,
             fleeDistance, tooCloseDistance, meleeDistance, followDistance, whisperDistance, contactDistance,
@@ -79,6 +79,8 @@ class PlayerbotAIConfig
         std::vector<uint32> randomBotQuestIds;
         uint32 randomBotTeleportDistance;
         float randomGearLoweringChance;
+        int32 randomGearQualityLimit;
+        int32 randomGearScoreLimit;
         float randomBotMaxLevelChance;
         float randomBotRpgChance;
         uint32 minRandomBots, maxRandomBots;
@@ -93,6 +95,8 @@ class PlayerbotAIConfig
         uint32 randomBotsPerInterval;
         uint32 minRandomBotsPriceChangeInterval, maxRandomBotsPriceChangeInterval;
         bool randomBotJoinLfg;
+        bool randomBotTalk;
+        bool randomBotEmote;
         bool randomBotSuggestDungeons;
         bool suggestDungeonsInLowerCaseRandomly;
         bool randomBotJoinBG;
@@ -134,6 +138,7 @@ class PlayerbotAIConfig
         bool randombotsWalkingRPGInDoors;
         uint32 minEnchantingBotLevel;
         uint32 limitEnchantExpansion;
+        uint32 limitGearExpansion;
         uint32 randombotStartingLevel;
         bool enableRotation;
         uint32 rotationPoolSize;
@@ -174,6 +179,7 @@ class PlayerbotAIConfig
         bool summonWhenGroup;
         bool randomBotShowHelmet;
         bool randomBotShowCloak;
+        bool randomBotFixedLevel;
         bool disableRandomLevels;
         uint32 playerbotsXPrate;
         bool disableDeathKnightLogin;
@@ -200,6 +206,7 @@ class PlayerbotAIConfig
         bool autoLearnQuestSpells;
         bool autoTeleportForLevel;
         bool randomBotSayWithoutMaster;
+        bool sayWhenCollectingItems;
         bool randomBotGroupNearby;
         uint32 tweakValue; //Debugging config
 
@@ -212,9 +219,14 @@ class PlayerbotAIConfig
         bool equipmentPersistence;
         int32 equipmentPersistenceLevel;
         int32 groupInvitationPermission;
-        int32 botReviveWhenSummon;
+        bool allowSummonInCombat;
+        bool allowSummonWhenMasterIsDead;
+        bool allowSummonWhenBotIsDead;
+        int reviveBotWhenSummoned;
+        bool botRepairWhenSummon;
         bool autoInitOnly;
         float autoInitEquipLevelLimitRatio;
+        int32 maxAddedBots, maxAddedBotsPerClass;
         int32 addClassCommand;
         int32 maintenanceCommand;
         int32 autoGearCommand, autoGearQualityLimit, autoGearScoreLimit;

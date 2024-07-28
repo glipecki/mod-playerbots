@@ -23,10 +23,15 @@ bool ChangeTalentsAction::Execute(Event event)
         if (param.find("help") != std::string::npos) {
             out << TalentsHelp();
         } else if (param.find("switch") != std::string::npos) {
-            if (param.find("switch 1")) {
+            if (param.find("switch 1") != std::string::npos) {
                 bot->ActivateSpec(0);
                 out << "Active first talent";
-            } else if (param.find("switch 2")) {
+            } else if (param.find("switch 2") != std::string::npos) {
+                if (bot->GetSpecsCount() == 1 && bot->GetLevel() >= sWorld->getIntConfig(CONFIG_MIN_DUALSPEC_LEVEL))
+                {
+                    bot->CastSpell(bot, 63680, true, nullptr, nullptr, bot->GetGUID());
+                    bot->CastSpell(bot, 63624, true, nullptr, nullptr, bot->GetGUID());
+                }
                 bot->ActivateSpec(1);
                 out << "Active second talent";
             }
@@ -39,9 +44,11 @@ bool ChangeTalentsAction::Execute(Event event)
         } else if (param.find("spec ") != std::string::npos) {
             param = param.substr(5);
             out << SpecPick(param);
+            botAI->ResetStrategies();
         } else if (param.find("apply ") != std::string::npos) {
             param = param.substr(6);
             out << SpecApply(param);
+            botAI->ResetStrategies();
         } else {
             out << "Unknown command.";
         }
@@ -148,7 +155,7 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
 //     // for (auto& path : sPlayerbotAIConfig->classSpecs[bot->getClass()].talentPath)
 //     // {
 //     //     TalentSpec newSpec = *GetBestPremadeSpec(path.id);
-//     //     newSpec.CropTalents(bot->getLevel());
+//     //     newSpec.CropTalents(bot->GetLevel());
 //     //     if (oldSpec->isEarlierVersionOf(newSpec))
 //     //     {
 //     //         ret.push_back(&path);
@@ -218,7 +225,7 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
 // bool ChangeTalentsAction::AutoSelectTalents(std::ostringstream* out)
 // {
 //     // Does the bot have talentpoints?
-//     if (bot->getLevel() < 10)
+//     if (bot->GetLevel() < 10)
 //     {
 //         *out << "No free talent points.";
 //         return false;
@@ -232,7 +239,7 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
 //     if (specNo > 0)
 //     {
 //         TalentSpec newSpec = *GetBestPremadeSpec(specId);
-//         newSpec.CropTalents(bot->getLevel());
+//         newSpec.CropTalents(bot->GetLevel());
 //         newSpec.ApplyTalents(bot, out);
 //         if (newSpec.GetTalentPoints() > 0)
 //         {
@@ -242,7 +249,7 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
 //     else if (!specLink.empty())
 //     {
 //         TalentSpec newSpec(bot, specLink);
-//         newSpec.CropTalents(bot->getLevel());
+//         newSpec.CropTalents(bot->GetLevel());
 //         newSpec.ApplyTalents(bot, out);
 //         if (newSpec.GetTalentPoints() > 0)
 //         {
@@ -281,7 +288,7 @@ std::string ChangeTalentsAction::SpecApply(std::string param)
 //             specId = PickPremadePath(paths, sRandomPlayerbotMgr->IsRandomBot(bot))->id;
 //             TalentSpec newSpec = *GetBestPremadeSpec(specId);
 //             specLink = newSpec.GetTalentLink();
-//             newSpec.CropTalents(bot->getLevel());
+//             newSpec.CropTalents(bot->GetLevel());
 //             newSpec.ApplyTalents(bot, out);
 
 //             if (paths.size() > 1)

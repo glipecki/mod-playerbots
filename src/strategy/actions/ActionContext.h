@@ -89,6 +89,8 @@ class ActionContext : public NamedObjectContext<Action>
             creators["flee"] = &ActionContext::flee;
             creators["flee with pet"] = &ActionContext::flee_with_pet;
             creators["avoid aoe"] = &ActionContext::avoid_aoe;
+            creators["combat formation move"] = &ActionContext::combat_formation_move;
+            creators["disperse set"] = &ActionContext::disperse_set;
             creators["gift of the naaru"] = &ActionContext::gift_of_the_naaru;
             creators["shoot"] = &ActionContext::shoot;
             creators["lifeblood"] = &ActionContext::lifeblood;
@@ -121,6 +123,7 @@ class ActionContext : public NamedObjectContext<Action>
             creators["talk"] = &ActionContext::talk;
             creators["suggest what to do"] = &ActionContext::suggest_what_to_do;
             creators["suggest trade"] = &ActionContext::suggest_trade;
+            creators["suggest dungeon"] = &ActionContext::suggest_dungeon;
             creators["return"] = &ActionContext::_return;
             creators["move to loot"] = &ActionContext::move_to_loot;
             creators["open loot"] = &ActionContext::open_loot;
@@ -150,6 +153,7 @@ class ActionContext : public NamedObjectContext<Action>
             creators["auto talents"] = &ActionContext::auto_talents;
             creators["auto learn spell"] = &ActionContext::auto_learn_spell;
             creators["auto teleport for level"] = &ActionContext::auto_teleport_for_level;
+            creators["auto upgrade equip"] = &ActionContext::auto_upgrade_equip;
             creators["xp gain"] = &ActionContext::xp_gain;
             creators["invite nearby"] = &ActionContext::invite_nearby;
             creators["invite guild"] = &ActionContext::invite_guild;
@@ -265,6 +269,8 @@ class ActionContext : public NamedObjectContext<Action>
         static Action* flee(PlayerbotAI* botAI) { return new FleeAction(botAI); }
         static Action* flee_with_pet(PlayerbotAI* botAI) { return new FleeWithPetAction(botAI); }
         static Action* avoid_aoe(PlayerbotAI* botAI) { return new AvoidAoeAction(botAI); }
+        static Action* combat_formation_move(PlayerbotAI* botAI) { return new CombatFormationMoveAction(botAI); }
+        static Action* disperse_set(PlayerbotAI* botAI) { return new DisperseSetAction(botAI); }
         static Action* gift_of_the_naaru(PlayerbotAI* botAI) { return new CastGiftOfTheNaaruAction(botAI); }
         static Action* lifeblood(PlayerbotAI* botAI) { return new CastLifeBloodAction(botAI); }
         static Action* arcane_torrent(PlayerbotAI* botAI) { return new CastArcaneTorrentAction(botAI); }
@@ -275,6 +281,7 @@ class ActionContext : public NamedObjectContext<Action>
         static Action* talk(PlayerbotAI* botAI) { return new TalkAction(botAI); }
         static Action* suggest_what_to_do(PlayerbotAI* botAI) { return new SuggestWhatToDoAction(botAI); }
         static Action* suggest_trade(PlayerbotAI* botAI) { return new SuggestTradeAction(botAI); }
+        static Action* suggest_dungeon(PlayerbotAI* botAI) { return new SuggestDungeonAction(botAI); }
         static Action* attack_anything(PlayerbotAI* botAI) { return new AttackAnythingAction(botAI); }
         static Action* attack_least_hp_target(PlayerbotAI* botAI) { return new AttackLeastHpTargetAction(botAI); }
         static Action* attack_enemy_player(PlayerbotAI* botAI) { return new AttackEnemyPlayerAction(botAI); }
@@ -315,6 +322,7 @@ class ActionContext : public NamedObjectContext<Action>
         static Action* auto_talents(PlayerbotAI* botAI) { return new AutoSetTalentsAction(botAI); }
         static Action* auto_learn_spell(PlayerbotAI* botAI) { return new AutoLearnSpellAction(botAI); }
         static Action* auto_teleport_for_level(PlayerbotAI* botAI) { return new AutoTeleportForLevelAction(botAI); }
+        static Action* auto_upgrade_equip(PlayerbotAI* botAI) { return new AutoUpgradeEquipAction(botAI); }
         static Action* xp_gain(PlayerbotAI* botAI) { return new XpGainAction(botAI); }
         static Action* invite_nearby(PlayerbotAI* botAI) { return new InviteNearbyToGroupAction(botAI); }
         static Action* invite_guild(PlayerbotAI* botAI) { return new InviteGuildToGroupAction(botAI); }

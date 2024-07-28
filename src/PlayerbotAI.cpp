@@ -191,7 +191,7 @@ PlayerbotAI::~PlayerbotAI()
         delete aiObjectContext;
 
     if (bot)
-        sPlayerbotsMgr->RemovePlayerBotData(bot->GetGUID());
+        sPlayerbotsMgr->RemovePlayerBotData(bot->GetGUID(), true);
 }
 
 void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
@@ -352,10 +352,16 @@ void PlayerbotAI::UpdateAIInternal([[maybe_unused]] uint32 elapsed, bool minimal
         Player* owner = holder.GetOwner();
         if (!helper.ParseChatCommand(command, owner) && holder.GetType() == CHAT_MSG_WHISPER)
         {
-            std::ostringstream out;
-            out << "Unknown command " << command;
-            TellMaster(out);
-            helper.ParseChatCommand("help");
+             // To prevent spam caused by WIM
+            if (!(command.rfind("WIM", 0) == 0) &&
+                !(command.rfind("QHpr", 0) == 0)
+                )
+            {
+                std::ostringstream out;
+                out << "Unknown command " << command;
+                TellMaster(out);
+                helper.ParseChatCommand("help");
+            }
         }
 
         chatCommands.pop();
@@ -444,22 +450,28 @@ void PlayerbotAI::HandleTeleportAck()
 
 	bot->GetMotionMaster()->Clear(true);
 	bot->StopMoving();
-	if (bot->IsBeingTeleportedNear())
-	{
-		WorldPacket p = WorldPacket(MSG_MOVE_TELEPORT_ACK, 8 + 4 + 4);
-        p << bot->GetGUID().WriteAsPacked();
-		p << (uint32) 0; // supposed to be flags? not used currently
-		p << (uint32) time(nullptr); // time - not currently used
-        bot->GetSession()->HandleMoveTeleportAck(p);
-
-        // add delay to simulate teleport delay
+    if (bot->IsBeingTeleportedNear()) {
+        // Temporary fix for instance can not enter
+        if (!bot->IsInWorld()) {
+            bot->GetMap()->AddPlayerToMap(bot);
+        }
+        while (bot->IsInWorld() && bot->IsBeingTeleportedNear()) {
+            Player* plMover = bot->m_mover->ToPlayer();
+            if (!plMover)
+                return;
+            WorldPacket p = WorldPacket(MSG_MOVE_TELEPORT_ACK, 20);
+            p << plMover->GetPackGUID();
+            p << (uint32) 0; // supposed to be flags? not used currently
+            p << (uint32) 0; // time - not currently used
+            bot->GetSession()->HandleMoveTeleportAck(p);
+        }
         SetNextCheckDelay(urand(1000, 3000));
-	}
-	else if (bot->IsBeingTeleportedFar())
+    }
+	if (bot->IsBeingTeleportedFar())
 	{
-        bot->GetSession()->HandleMoveWorldportAck();
-
-        // add delay to simulate teleport delay
+        while (bot->IsBeingTeleportedFar()) {
+            bot->GetSession()->HandleMoveWorldportAck();
+        }
         SetNextCheckDelay(urand(2000, 5000));
     }
 
@@ -614,10 +626,15 @@ void PlayerbotAI::HandleCommand(uint32 type, std::string const text, Player* fro
         return;
     }
 
-    if (!IsAllowedCommand(filtered) && !GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_ALLOW_ALL, type != CHAT_MSG_WHISPER, fromPlayer))
+    if (!IsAllowedCommand(filtered) && 
+        (master != fromPlayer || !GetSecurity()->CheckLevelFor(PLAYERBOT_SECURITY_ALLOW_ALL, type != CHAT_MSG_WHISPER, fromPlayer)))
         return;
 
-    if (type == CHAT_MSG_RAID_WARNING && filtered.find(bot->GetName()) != std::string::npos && filtered.find("award") == std::string::npos)
+    if (!IsAllowedCommand(filtered) && master != fromPlayer)
+        return;
+
+    if (type == CHAT_MSG_RAID_WARNING && filtered.find(bot->GetName()) != std::string::npos &&
+        filtered.find("award") == std::string::npos)
     {
         ChatCommandHolder cmd("warning", fromPlayer, type);
         chatCommands.push(cmd);
@@ -1093,7 +1110,7 @@ void PlayerbotAI::DoNextAction(bool min)
                     if (!group->SameSubGroup(bot, member))
                         continue;
 
-                    if (member->getLevel() < bot->getLevel())
+                    if (member->GetLevel() < bot->GetLevel())
                         continue;
 
                     // follow real player only if he has more honor/arena points
@@ -1809,6 +1826,16 @@ Player* PlayerbotAI::GetPlayer(ObjectGuid guid)
     return unit ? unit->ToPlayer() : nullptr;
 }
 
+uint32 GetCreatureIdForCreatureTemplateId(uint32 creatureTemplateId)
+{
+    QueryResult results = WorldDatabase.Query("SELECT guid FROM `creature` WHERE id1 = {} LIMIT 1;", creatureTemplateId);
+    if (results) {
+        Field* fields = results->Fetch();
+        return fields[0].Get<uint32>();
+    }
+    return 0;
+}
+
 Unit* PlayerbotAI::GetUnit(CreatureData const* creatureData)
 {
     if (!creatureData)
@@ -1818,7 +1845,10 @@ Unit* PlayerbotAI::GetUnit(CreatureData const* creatureData)
     if (!map)
         return nullptr;
 
-    auto creatureBounds = map->GetCreatureBySpawnIdStore().equal_range(creatureData->spawnId);
+    uint32 spawnId = creatureData->spawnId;
+    if (!spawnId) // workaround for CreatureData with missing spawnId (this just uses first matching creatureId in DB, but thats ok this method is only used for battlemasters and theres only 1 of each type)
+        spawnId = GetCreatureIdForCreatureTemplateId(creatureData->id1);
+    auto creatureBounds = map->GetCreatureBySpawnIdStore().equal_range(spawnId);
     if (creatureBounds.first == creatureBounds.second)
         return nullptr;
 
@@ -1888,19 +1918,19 @@ bool PlayerbotAI::TellMasterNoFacing(std::string const text, PlayerbotSecurityLe
         return false;
 
     time_t lastSaid = whispers[text];
-    // Yunfan: Remove tell cooldown
-    // if (!lastSaid || (time(nullptr) - lastSaid) >= sPlayerbotAIConfig->repeatDelay / 1000)
-    // {
-    whispers[text] = time(nullptr);
+    
+    if (!lastSaid || (time(nullptr) - lastSaid) >= sPlayerbotAIConfig->repeatDelay / 1000)
+    {
+        whispers[text] = time(nullptr);
 
-    ChatMsg type = CHAT_MSG_WHISPER;
-    if (currentChat.second - time(nullptr) >= 1)
-        type = currentChat.first;
+        ChatMsg type = CHAT_MSG_WHISPER;
+        if (currentChat.second - time(nullptr) >= 1)
+            type = currentChat.first;
 
-    WorldPacket data;
-    ChatHandler::BuildChatPacket(data, type == CHAT_MSG_ADDON ? CHAT_MSG_PARTY : type, type == CHAT_MSG_ADDON ? LANG_ADDON : LANG_UNIVERSAL, bot, nullptr, text.c_str());
-    master->SendDirectMessage(&data);
-    // }
+        WorldPacket data;
+        ChatHandler::BuildChatPacket(data, type == CHAT_MSG_ADDON ? CHAT_MSG_PARTY : type, type == CHAT_MSG_ADDON ? LANG_ADDON : LANG_UNIVERSAL, bot, nullptr, text.c_str());
+        master->SendDirectMessage(&data);
+    }
 
     return true;
 }

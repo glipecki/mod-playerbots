@@ -4,6 +4,7 @@
 
 #include "MovementActions.h"
 #include "GameObject.h"
+#include "Geometry.h"
 #include "Map.h"
 #include "MotionMaster.h"
 #include "MoveSplineInitArgs.h"
@@ -12,6 +13,7 @@
 #include "ObjectGuid.h"
 #include "PathGenerator.h"
 #include "PlayerbotAIConfig.h"
+#include "Position.h"
 #include "Random.h"
 #include "SharedDefines.h"
 #include "SpellAuraEffects.h"
@@ -25,10 +27,15 @@
 #include "LootObjectStack.h"
 #include "Playerbots.h"
 #include "ServerFacade.h"
+#include "Timer.h"
 #include "Transport.h"
 #include "Unit.h"
 #include "Vehicle.h"
 #include "WaypointMovementGenerator.h"
+#include <cmath>
+#include <cstdlib>
+#include <iomanip>
+#include <string>
 
 MovementAction::MovementAction(PlayerbotAI* botAI, std::string const name) : Action(botAI, name)
 {
@@ -156,7 +163,9 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
     // }
     bool generatePath = !bot->HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) &&
             !bot->IsFlying() && !bot->HasUnitMovementFlag(MOVEMENTFLAG_SWIMMING) && !bot->IsInWater();
-    if (!generatePath) {
+    bool disableMoveSplinePath = sPlayerbotAIConfig->disableMoveSplinePath >= 2 ||
+        (sPlayerbotAIConfig->disableMoveSplinePath == 1 && bot->InBattleground());
+    if (disableMoveSplinePath || !generatePath) {
         float distance = bot->GetExactDist(x, y, z);
         if (distance > sPlayerbotAIConfig->contactDistance)
         {
@@ -393,7 +402,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
 
     //             out << std::to_string(bot->getRace()) << ",";
     //             out << std::to_string(bot->getClass()) << ",";
-    //             out << bot->getLevel() << ",";
+    //             out << bot->GetLevel() << ",";
     //             out << (entry ? -1 : entry);
 
     //             sPlayerbotAIConfig->log("bot_movement.csv", out.str().c_str());
@@ -550,7 +559,7 @@ bool MovementAction::MoveTo(uint32 mapId, float x, float y, float z, bool idle, 
     //     startPosition.printWKT({ startPosition, movePosition }, out, 1);
     //     out << std::to_string(bot->getRace()) << ",";
     //     out << std::to_string(bot->getClass()) << ",";
-    //     out << bot->getLevel();
+    //     out << bot->GetLevel();
     //     out << 0;
 
     //     sPlayerbotAIConfig->log("bot_movement.csv", out.str().c_str());
@@ -840,6 +849,21 @@ void MovementAction::UpdateMovementState()
 
     if (bot->IsFlying())
         bot->UpdateSpeed(MOVE_FLIGHT, true);
+
+    Transport* newTransport = bot->GetMap()->GetTransportForPos(bot->GetPhaseMask(), bot->GetPositionX(), bot->GetPositionY(), bot->GetPositionZ(), bot);
+    if (newTransport != bot->GetTransport())
+    {
+        LOG_DEBUG("playerbots", "Bot {} is on a transport", bot->GetName());
+
+        if (bot->GetTransport())
+            bot->GetTransport()->RemovePassenger(bot, true);
+
+        if (newTransport)
+            newTransport->AddPassenger(bot, true);
+
+        bot->StopMovingOnCurrentPos();
+    }
+
     // Temporary speed increase in group
     //if (botAI->HasRealPlayerMaster())
         //bot->SetSpeedRate(MOVE_RUN, 1.1f);
@@ -1495,6 +1519,9 @@ bool FleeWithPetAction::Execute(Event event)
 
 bool AvoidAoeAction::isUseful()
 {
+    if (getMSTime() - moveInterval < lastMoveTimer) {
+        return false;
+    }
     GuidVector traps = AI_VALUE(GuidVector, "nearest trap with damage");
     GuidVector triggers = AI_VALUE(GuidVector, "possible triggers");
     return AI_VALUE(Aura*, "area debuff") || !traps.empty() || !triggers.empty();
@@ -1523,6 +1550,9 @@ bool AvoidAoeAction::AvoidAuraWithDynamicObj()
     if (!aura || aura->IsRemoved() || aura->IsExpired()) {
         return false;
     }
+    if (!aura->GetOwner() || !aura->GetOwner()->IsInWorld()) {
+        return false;
+    }
     // Crash fix: maybe change owner due to check interval
     if (aura->GetType() != DYNOBJ_AURA_TYPE) {
         return false;
@@ -1540,8 +1570,15 @@ bool AvoidAoeAction::AvoidAuraWithDynamicObj()
         return false;
     }
     std::ostringstream name;
-    name << spellInfo->SpellName[0]; // << "] (aura)";
-    if (FleePosition(dynOwner->GetPosition(), radius, name.str())) {
+    name << spellInfo->SpellName[LOCALE_enUS]; // << "] (aura)";
+    if (FleePosition(dynOwner->GetPosition(), radius)) {
+        if (sPlayerbotAIConfig->tellWhenAvoidAoe && lastTellTimer < time(NULL) - 10) {
+            lastTellTimer = time(NULL);
+            lastMoveTimer = getMSTime();
+            std::ostringstream out;
+            out << "I'm avoiding " << name.str() << "...";
+            bot->Say(out.str(), LANG_UNIVERSAL);
+        }
         return true;
     }
     return false;
@@ -1573,7 +1610,7 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
             continue;
         }
         const SpellInfo* spellInfo = sSpellMgr->GetSpellInfo(spellId);
-        if (spellInfo->IsPositive()) {
+        if (!spellInfo || spellInfo->IsPositive()) {
             continue;
         }
         float radius = (float)goInfo->trap.diameter / 2;
@@ -1591,8 +1628,15 @@ bool AvoidAoeAction::AvoidGameObjectWithDamage()
             continue;
         }
         std::ostringstream name;
-        name << spellInfo->SpellName[0]; // << "] (object)";
-        if (FleePosition(go->GetPosition(), radius, name.str())) {
+        name << spellInfo->SpellName[LOCALE_enUS]; // << "] (object)";
+        if (FleePosition(go->GetPosition(), radius)) {
+            if (sPlayerbotAIConfig->tellWhenAvoidAoe && lastTellTimer < time(NULL) - 10) {
+                lastTellTimer = time(NULL);
+                lastMoveTimer = getMSTime();
+                std::ostringstream out;
+                out << "I'm avoiding " << name.str() << "...";
+                bot->Say(out.str(), LANG_UNIVERSAL);
+            }
             return true;
         }
         
@@ -1633,9 +1677,15 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
                             break;
                         }
                         std::ostringstream name;
-                        name << triggerSpellInfo->SpellName[0]; //<< "] (unit)";
-                        if (FleePosition(unit->GetPosition(), radius, name.str())) {
-                            return true;
+                        name << triggerSpellInfo->SpellName[LOCALE_enUS]; //<< "] (unit)";
+                        if (FleePosition(unit->GetPosition(), radius)) {
+                            if (sPlayerbotAIConfig->tellWhenAvoidAoe && lastTellTimer < time(NULL) - 10) {
+                                lastTellTimer = time(NULL);
+                                lastMoveTimer = getMSTime();
+                                std::ostringstream out;
+                                out << "I'm avoiding " << name.str() << "...";
+                                bot->Say(out.str(), LANG_UNIVERSAL);
+                            }
                         }
                     }
                 }
@@ -1645,45 +1695,296 @@ bool AvoidAoeAction::AvoidUnitWithDamageAura()
     return false;
 }
 
-bool AvoidAoeAction::FleePosition(Position pos, float radius, std::string name)
+Position MovementAction::BestPositionForMeleeToFlee(Position pos, float radius)
 {
     Unit* currentTarget = AI_VALUE(Unit*, "current target");
-    std::vector<float> possibleAngles;
+    std::vector<CheckAngle> possibleAngles;
     if (currentTarget) {
         // Normally, move to left or right is the best position
-        float angleLeft = bot->GetAngle(currentTarget) + M_PI / 2;
-        float angleRight = bot->GetAngle(currentTarget) - M_PI / 2;
-        possibleAngles.push_back(angleLeft);
-        possibleAngles.push_back(angleRight);
+        bool isTanking = (currentTarget->CanFreeMove()) && (currentTarget->GetVictim() == bot);
+        float angle = bot->GetAngle(currentTarget);
+        float angleLeft = angle + (float)M_PI / 2;
+        float angleRight = angle - (float)M_PI / 2;
+        possibleAngles.push_back({angleLeft, false});
+        possibleAngles.push_back({angleRight, false});
+        possibleAngles.push_back({angle, true});
+        if (isTanking) {
+            possibleAngles.push_back({angle + (float)M_PI, false});
+            possibleAngles.push_back({bot->GetAngle(&pos) - (float)M_PI, false});
+        }
     } else {
-        float angleTo = bot->GetAngle(&pos) - M_PI;
-        possibleAngles.push_back(angleTo);
+        float angleTo = bot->GetAngle(&pos) - (float)M_PI;
+        possibleAngles.push_back({angleTo, false});
     }
     float farestDis = 0.0f;
     Position bestPos;
-    for (float &angle : possibleAngles) {
-        float fleeDis = sPlayerbotAIConfig->fleeDistance;
+    for (CheckAngle &checkAngle : possibleAngles) {
+        float angle = checkAngle.angle;
+        auto& infoList = AI_VALUE_REF(std::list<FleeInfo>, "recently flee info");
+        if (!CheckLastFlee(angle, infoList)) {
+            continue;
+        }
+        bool strict = checkAngle.strict;
+        float fleeDis = std::min(radius + 1.0f, sPlayerbotAIConfig->fleeDistance);
         Position fleePos{bot->GetPositionX() + cos(angle) * fleeDis,
             bot->GetPositionY() + sin(angle) * fleeDis, 
             bot->GetPositionZ()};
-        // todo (Yunfan): check carefully
+        if (strict && currentTarget
+                && fleePos.GetExactDist(currentTarget) - currentTarget->GetCombatReach() > sPlayerbotAIConfig->tooCloseDistance
+                && bot->IsWithinMeleeRange(currentTarget)) {
+            continue;
+        }
         if (pos.GetExactDist(fleePos) > farestDis) {
             farestDis = pos.GetExactDist(fleePos);
             bestPos = fleePos;
         }
     }
     if (farestDis > 0.0f) {
+        return bestPos;
+    }
+    return Position();
+}
+
+Position MovementAction::BestPositionForRangedToFlee(Position pos, float radius)
+{
+    Unit* currentTarget = AI_VALUE(Unit*, "current target");
+    std::vector<CheckAngle> possibleAngles;
+    float angleToTarget = 0.0f;
+    float angleFleeFromCenter = bot->GetAngle(&pos) - (float)M_PI;
+    if (currentTarget) {
+        // Normally, move to left or right is the best position
+        angleToTarget = bot->GetAngle(currentTarget);
+        float angleLeft = angleToTarget + (float)M_PI / 2;
+        float angleRight = angleToTarget - (float)M_PI / 2;
+        possibleAngles.push_back({angleLeft, false});
+        possibleAngles.push_back({angleRight, false});
+        possibleAngles.push_back({angleToTarget + (float)M_PI, true});
+        possibleAngles.push_back({angleToTarget, true});
+        possibleAngles.push_back({angleFleeFromCenter, true});
+    } else {
+        possibleAngles.push_back({angleFleeFromCenter, false});
+    }
+    float farestDis = 0.0f;
+    Position bestPos;
+    for (CheckAngle &checkAngle : possibleAngles) {
+        float angle = checkAngle.angle;
+        auto& infoList = AI_VALUE_REF(std::list<FleeInfo>, "recently flee info");
+        if (!CheckLastFlee(angle, infoList)) {
+            continue;
+        }
+        bool strict = checkAngle.strict;
+        float fleeDis = std::min(radius + 1.0f, sPlayerbotAIConfig->fleeDistance);
+        Position fleePos{bot->GetPositionX() + cos(angle) * fleeDis,
+            bot->GetPositionY() + sin(angle) * fleeDis, 
+            bot->GetPositionZ()};
+        if (strict && currentTarget
+                && fleePos.GetExactDist(currentTarget) - currentTarget->GetCombatReach() > sPlayerbotAIConfig->spellDistance) {
+            continue;
+        }
+        if (strict && currentTarget
+                && fleePos.GetExactDist(currentTarget) - currentTarget->GetCombatReach() < (sPlayerbotAIConfig->tooCloseDistance)) {
+            continue;
+        }
+        if (pos.GetExactDist(fleePos) > farestDis) {
+            farestDis = pos.GetExactDist(fleePos);
+            bestPos = fleePos;
+        }
+    }
+    if (farestDis > 0.0f) {
+        return bestPos;
+    }
+    return Position();
+}
+
+bool MovementAction::FleePosition(Position pos, float radius)
+{
+    Position bestPos;
+    if (botAI->IsMelee(bot)) {
+        bestPos = BestPositionForMeleeToFlee(pos, radius);
+    } else {
+        bestPos = BestPositionForRangedToFlee(pos, radius);
+    }
+    if (bestPos != Position()) {
         if (MoveTo(bot->GetMapId(), bestPos.GetPositionX(), bestPos.GetPositionY(), bestPos.GetPositionZ(), false, false, true)) {
-            if (sPlayerbotAIConfig->tellWhenAvoidAoe && lastTellTimer < time(NULL) - 10) {
-                lastTellTimer = time(NULL);
-                std::ostringstream out;
-                out << "I'm avoiding " << name << "...";
-                bot->Say(out.str(), LANG_UNIVERSAL);
+            auto& infoList = AI_VALUE_REF(std::list<FleeInfo>, "recently flee info");
+            uint32 curTS = getMSTime();
+            while (!infoList.empty()) {
+                if (infoList.size() > 10 || infoList.front().timestamp + 5000 < curTS) {
+                    infoList.pop_front();
+                } else {
+                    break;
+                }
             }
+            infoList.push_back({pos, radius, bot->GetAngle(&bestPos), curTS});
             return true;
         }
     }
     return false;
+}
+
+bool MovementAction::CheckLastFlee(float curAngle, std::list<FleeInfo>& infoList)
+{
+    uint32 curTS = getMSTime();
+    curAngle = fmod(curAngle, 2 * M_PI);
+    while (!infoList.empty()) {
+        if (infoList.size() > 10 || infoList.front().timestamp + 5000 < curTS) {
+            infoList.pop_front();
+        } else {
+            break;
+        }
+    }
+    for (FleeInfo& info : infoList) {
+        // more than 5 sec
+        if (info.timestamp + 5000 < curTS) {
+            continue;
+        }
+        float revAngle = fmod(info.angle + M_PI, 2 * M_PI);
+        // angle too close
+        if (fabs(revAngle - curAngle) < M_PI / 4) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool CombatFormationMoveAction::isUseful()
+{
+    if (getMSTime() - moveInterval < lastMoveTimer) {
+        return false;
+    }
+    if (bot->GetCurrentSpell(CURRENT_CHANNELED_SPELL) != nullptr) {
+        return false;
+    }
+    float dis = AI_VALUE(float, "disperse distance");
+    return dis > 0.0f;
+}
+
+bool CombatFormationMoveAction::Execute(Event event)
+{
+    float dis = AI_VALUE(float, "disperse distance");
+    Player* playerToLeave = NearestGroupMember(dis);
+    if (playerToLeave && bot->GetExactDist(playerToLeave) < dis) {
+        if (FleePosition(playerToLeave->GetPosition(), dis)) {
+            lastMoveTimer = getMSTime();
+        }
+    }
+    return false;
+}
+
+Position CombatFormationMoveAction::AverageGroupPos(float dis)
+{
+    float averageX = 0, averageY = 0, averageZ = 0;
+    int cnt = 0;
+    Group* group = bot->GetGroup();
+    if (!group) {
+        return Position();
+    }
+    Group::MemberSlotList const& groupSlot = group->GetMemberSlots();
+    for (Group::member_citerator itr = groupSlot.begin(); itr != groupSlot.end(); itr++)
+    {
+        Player *member = ObjectAccessor::FindPlayer(itr->guid);
+        if (!member || !member->IsAlive() || member->GetMapId() != bot->GetMapId() || member->IsCharmed() || sServerFacade->GetDistance2d(bot, member) > dis)
+            continue;
+        cnt++;
+        averageX += member->GetPositionX();
+        averageY += member->GetPositionY();
+        averageZ += member->GetPositionZ();
+    }
+    averageX /= cnt;
+    averageY /= cnt;
+    averageZ /= cnt;
+    return Position(averageX, averageY, averageZ);
+}
+
+Player* CombatFormationMoveAction::NearestGroupMember(float dis)
+{
+    float nearestDis = 10000.0f;
+    Player* result = nullptr;
+    Group* group = bot->GetGroup();
+    if (!group) {
+        return result;
+    }
+    Group::MemberSlotList const& groupSlot = group->GetMemberSlots();
+    for (Group::member_citerator itr = groupSlot.begin(); itr != groupSlot.end(); itr++)
+    {
+        Player *member = ObjectAccessor::FindPlayer(itr->guid);
+        if (!member || !member->IsAlive() || member == bot || member->GetMapId() != bot->GetMapId() || member->IsCharmed() || sServerFacade->GetDistance2d(bot, member) > dis)
+            continue;
+        if (nearestDis > bot->GetExactDist(member)) {
+            result = member;
+            nearestDis = bot->GetExactDist(member);
+        }
+    }
+    return result;
+}
+
+bool DisperseSetAction::Execute(Event event)
+{
+    std::string const text = event.getParam();
+    if (text == "disable") {
+        RESET_AI_VALUE(float, "disperse distance");
+        botAI->TellMasterNoFacing("Disable disperse");
+        return true;
+    }
+    if (text == "enable" || text == "reset") {
+        if (botAI->IsMelee(bot)) {
+            SET_AI_VALUE(float, "disperse distance", DEFAULT_DISPERSE_DISTANCE_MELEE);
+        } else {
+            SET_AI_VALUE(float, "disperse distance", DEFAULT_DISPERSE_DISTANCE_RANGED);
+        }
+        float dis = AI_VALUE(float, "disperse distance");
+        std::ostringstream out;
+        out << "Enable disperse distance " << std::setprecision(2) << dis;
+        botAI->TellMasterNoFacing(out.str());
+        return true;
+    }
+    if (text == "increase") {
+        float dis = AI_VALUE(float, "disperse distance");
+        std::ostringstream out;
+        if (dis <= 0.0f) {
+            out << "Enable disperse first";
+            botAI->TellMasterNoFacing(out.str());
+            return true;
+        }
+        dis += 1.0f;
+        SET_AI_VALUE(float, "disperse distance", dis);
+        out << "Increase disperse distance to " << std::setprecision(2) << dis;
+        botAI->TellMasterNoFacing(out.str());
+        return true;
+    }
+    if (text == "decrease") {
+        float dis = AI_VALUE(float, "disperse distance");
+        dis -= 1.0f;
+        if (dis <= 0.0f) {
+            dis += 1.0f;
+        }
+        SET_AI_VALUE(float, "disperse distance", dis);
+        std::ostringstream out;
+        out << "Increase disperse distance to " << std::setprecision(2) << dis;
+        botAI->TellMasterNoFacing(out.str());
+        return true;
+    }
+    if (text.starts_with("set")) {
+        float dis = -1.0f;;
+        sscanf(text.c_str(), "set %f", &dis);
+        std::ostringstream out;
+        if (dis < 0 || dis > 100.0f) {
+            out << "Invalid disperse distance " << std::setprecision(2) << dis;
+        } else {
+            SET_AI_VALUE(float, "disperse distance", dis);
+            out << "Set disperse distance to " << std::setprecision(2) << dis;
+        }
+        botAI->TellMasterNoFacing(out.str());
+        return true;
+    }
+    std::ostringstream out;
+    out << "Usage: disperse [enable | disable | increase | decrease | set {distance}]";
+    float dis = AI_VALUE(float, "disperse distance");
+    if (dis > 0.0f) {
+        out << "(Current disperse distance: " << std::setprecision(2) << dis << ")";
+    }
+    botAI->TellMasterNoFacing(out.str());
+    return true;
 }
 
 bool RunAwayAction::Execute(Event event)

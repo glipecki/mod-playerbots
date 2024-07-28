@@ -79,7 +79,9 @@ class ShamanATriggerFactoryInternal : public NamedObjectContext<Trigger>
             creators["searing totem"] = &ShamanATriggerFactoryInternal::searing_totem;
             creators["wind shear"] = &ShamanATriggerFactoryInternal::wind_shear;
             creators["purge"] = &ShamanATriggerFactoryInternal::purge;
-            creators["shaman weapon"] = &ShamanATriggerFactoryInternal::shaman_weapon;
+            //creators["shaman weapon"] = &ShamanATriggerFactoryInternal::shaman_weapon;
+            creators["main hand weapon no imbue"] = &ShamanATriggerFactoryInternal::main_hand_weapon_no_imbue;
+            creators["off hand weapon no imbue"] = &ShamanATriggerFactoryInternal::off_hand_weapon_no_imbue;
             creators["water shield"] = &ShamanATriggerFactoryInternal::water_shield;
             creators["lightning shield"] = &ShamanATriggerFactoryInternal::lightning_shield;
             creators["water breathing"] = &ShamanATriggerFactoryInternal::water_breathing;
@@ -96,6 +98,7 @@ class ShamanATriggerFactoryInternal : public NamedObjectContext<Trigger>
             creators["frost shock snare"] = &ShamanATriggerFactoryInternal::frost_shock_snare;
             creators["heroism"] = &ShamanATriggerFactoryInternal::heroism;
             creators["bloodlust"] = &ShamanATriggerFactoryInternal::bloodlust;
+            creators["elemental mastery"] = &ShamanATriggerFactoryInternal::elemental_mastery;
             creators["wind shear on enemy healer"] = &ShamanATriggerFactoryInternal::wind_shear_on_enemy_healer;
             creators["cure poison"] = &ShamanATriggerFactoryInternal::cure_poison;
             creators["party member cure poison"] = &ShamanATriggerFactoryInternal::party_member_cure_poison;
@@ -114,6 +117,7 @@ class ShamanATriggerFactoryInternal : public NamedObjectContext<Trigger>
         static Trigger* maelstrom_weapon(PlayerbotAI* botAI) { return new MaelstromWeaponTrigger(botAI); }
         static Trigger* heroism(PlayerbotAI* botAI) { return new HeroismTrigger(botAI); }
         static Trigger* bloodlust(PlayerbotAI* botAI) { return new BloodlustTrigger(botAI); }
+        static Trigger* elemental_mastery(PlayerbotAI* botAI) { return new ElementalMasteryTrigger(botAI); }
         static Trigger* party_member_cleanse_disease(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritDiseaseTrigger(botAI); }
         static Trigger* party_member_cleanse_curse(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritCurseTrigger(botAI); }
         static Trigger* party_member_cleanse_poison(PlayerbotAI* botAI) { return new PartyMemberCleanseSpiritPoisonTrigger(botAI); }
@@ -134,7 +138,9 @@ class ShamanATriggerFactoryInternal : public NamedObjectContext<Trigger>
         static Trigger* searing_totem(PlayerbotAI* botAI) { return new SearingTotemTrigger(botAI); }
         static Trigger* wind_shear(PlayerbotAI* botAI) { return new WindShearInterruptSpellTrigger(botAI); }
         static Trigger* purge(PlayerbotAI* botAI) { return new PurgeTrigger(botAI); }
-        static Trigger* shaman_weapon(PlayerbotAI* botAI) { return new ShamanWeaponTrigger(botAI); }
+        //static Trigger* shaman_weapon(PlayerbotAI* botAI) { return new ShamanWeaponTrigger(botAI); }
+        static Trigger* main_hand_weapon_no_imbue(PlayerbotAI* botAI) { return new MainHandWeaponNoImbueTrigger(botAI); }
+        static Trigger* off_hand_weapon_no_imbue(PlayerbotAI* botAI) { return new OffHandWeaponNoImbueTrigger(botAI); }
         static Trigger* water_shield(PlayerbotAI* botAI) { return new WaterShieldTrigger(botAI); }
         static Trigger* lightning_shield(PlayerbotAI* botAI) { return new LightningShieldTrigger(botAI); }
         static Trigger* shock(PlayerbotAI* botAI) { return new ShockTrigger(botAI); }
@@ -206,10 +212,11 @@ class ShamanAiObjectContextInternal : public NamedObjectContext<Action>
             creators["thunderstorm"] = &ShamanAiObjectContextInternal::thunderstorm;
             creators["heroism"] = &ShamanAiObjectContextInternal::heroism;
             creators["bloodlust"] = &ShamanAiObjectContextInternal::bloodlust;
-            // creators["cure disease"] = &ShamanAiObjectContextInternal::cure_disease;
-            // creators["cure disease on party"] = &ShamanAiObjectContextInternal::cure_disease_on_party;
-            // creators["cure poison"] = &ShamanAiObjectContextInternal::cure_poison;
-            // creators["cure poison on party"] = &ShamanAiObjectContextInternal::cure_poison_on_party;
+            creators["elemental mastery"] = &ShamanAiObjectContextInternal::elemental_mastery;
+            creators["cure disease"] = &ShamanAiObjectContextInternal::cure_disease;
+            creators["cure disease on party"] = &ShamanAiObjectContextInternal::cure_disease_on_party;
+            creators["cure poison"] = &ShamanAiObjectContextInternal::cure_poison;
+            creators["cure poison on party"] = &ShamanAiObjectContextInternal::cure_poison_on_party;
             creators["lava burst"] = &ShamanAiObjectContextInternal::lava_burst;
             creators["earth shield on main tank"] = &ShamanAiObjectContextInternal::earth_shield_on_main_tank;
             creators["fire elemental totem"] = &ShamanAiObjectContextInternal::fire_elemental_totem;
@@ -222,6 +229,7 @@ class ShamanAiObjectContextInternal : public NamedObjectContext<Action>
     private:
         static Action* heroism(PlayerbotAI* botAI) { return new CastHeroismAction(botAI); }
         static Action* bloodlust(PlayerbotAI* botAI) { return new CastBloodlustAction(botAI); }
+        static Action* elemental_mastery(PlayerbotAI* botAI) { return new CastElementalMasteryAction(botAI); }
         static Action* thunderstorm(PlayerbotAI* botAI) { return new CastThunderstormAction(botAI); }
         static Action* lightning_bolt(PlayerbotAI* botAI) { return new CastLightningBoltAction(botAI); }
         static Action* chain_lightning(PlayerbotAI* botAI) { return new CastChainLightningAction(botAI); }
@@ -269,10 +277,10 @@ class ShamanAiObjectContextInternal : public NamedObjectContext<Action>
         static Action* lava_lash(PlayerbotAI* botAI) { return new CastLavaLashAction(botAI); }
         static Action* ancestral_spirit(PlayerbotAI* botAI) { return new CastAncestralSpiritAction(botAI); }
         static Action* wind_shear_on_enemy_healer(PlayerbotAI* botAI) { return new CastWindShearOnEnemyHealerAction(botAI); }
-        // static Action* cure_poison(PlayerbotAI* botAI) { return new CastCurePoisonAction(botAI); }
-        // static Action* cure_poison_on_party(PlayerbotAI* botAI) { return new CastCurePoisonOnPartyAction(botAI); }
-        // static Action* cure_disease(PlayerbotAI* botAI) { return new CastCureDiseaseAction(botAI); }
-        // static Action* cure_disease_on_party(PlayerbotAI* botAI) { return new CastCureDiseaseOnPartyAction(botAI); }
+        static Action* cure_poison(PlayerbotAI* botAI) { return new CastCurePoisonActionSham(botAI); }
+        static Action* cure_poison_on_party(PlayerbotAI* botAI) { return new CastCurePoisonOnPartyActionSham(botAI); }
+        static Action* cure_disease(PlayerbotAI* botAI) { return new CastCureDiseaseActionSham(botAI); }
+        static Action* cure_disease_on_party(PlayerbotAI* botAI) { return new CastCureDiseaseOnPartyActionSham(botAI); }
         static Action* lava_burst(PlayerbotAI* ai) { return new CastLavaBurstAction(ai); }
         static Action* earth_shield_on_main_tank(PlayerbotAI* ai) { return new CastEarthShieldOnMainTankAction(ai); }
         static Action* totem_of_wrath(PlayerbotAI* ai) { return new CastTotemOfWrathAction(ai); }

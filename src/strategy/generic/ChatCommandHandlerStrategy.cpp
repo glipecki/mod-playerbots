@@ -61,6 +61,7 @@ void ChatCommandHandlerStrategy::InitTriggers(std::vector<TriggerNode*>& trigger
     triggers.push_back(new TriggerNode("naxx", NextAction::array(0, new NextAction("naxx chat shortcut", relevance), NULL)));
     triggers.push_back(new TriggerNode("bwl", NextAction::array(0, new NextAction("bwl chat shortcut", relevance), NULL)));
     triggers.push_back(new TriggerNode("dps", NextAction::array(0, new NextAction("tell expected dps", relevance), NULL)));
+    triggers.push_back(new TriggerNode("disperse", NextAction::array(0, new NextAction("disperse set", relevance), NULL)));
 }
 
 ChatCommandHandlerStrategy::ChatCommandHandlerStrategy(PlayerbotAI* botAI) : PassTroughStrategy(botAI)
@@ -89,6 +90,7 @@ ChatCommandHandlerStrategy::ChatCommandHandlerStrategy(PlayerbotAI* botAI) : Pas
     supported.push_back("de");
     supported.push_back("trainer");
     supported.push_back("maintenance");
+    supported.push_back("remove glyph");
     supported.push_back("autogear");
     supported.push_back("equip upgrade");
     supported.push_back("chat");

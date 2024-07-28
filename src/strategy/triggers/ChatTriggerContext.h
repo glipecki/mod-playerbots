@@ -55,6 +55,7 @@ class ChatTriggerContext : public NamedObjectContext<Trigger>
             creators["de"] = &ChatTriggerContext::dead;
             creators["trainer"] = &ChatTriggerContext::trainer;
             creators["maintenance"] = &ChatTriggerContext::maintenance;
+            creators["remove glyph"] = &ChatTriggerContext::remove_glyph;
             creators["autogear"] = &ChatTriggerContext::autogear;
             creators["equip upgrade"] = &ChatTriggerContext::equip_upgrade;
             creators["attack"] = &ChatTriggerContext::attack;
@@ -119,6 +120,7 @@ class ChatTriggerContext : public NamedObjectContext<Trigger>
             creators["naxx"] = &ChatTriggerContext::naxx;
             creators["bwl"] = &ChatTriggerContext::bwl;
             creators["dps"] = &ChatTriggerContext::dps;
+            creators["disperse"] = &ChatTriggerContext::disperse;
         }
 
     private:
@@ -170,6 +172,7 @@ class ChatTriggerContext : public NamedObjectContext<Trigger>
         static Trigger* attack(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "attack"); }
         static Trigger* trainer(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "trainer"); }
         static Trigger* maintenance(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "maintenance"); }
+        static Trigger* remove_glyph(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "remove glyph"); }
         static Trigger* autogear(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "autogear"); }
         static Trigger* equip_upgrade(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "equip upgrade"); }
         static Trigger* co(PlayerbotAI* botAI) { return new ChatCommandTrigger(botAI, "co"); }
@@ -218,6 +221,7 @@ class ChatTriggerContext : public NamedObjectContext<Trigger>
         static Trigger* naxx(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "naxx"); }
         static Trigger* bwl(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "bwl"); }
         static Trigger* dps(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "dps"); }
+        static Trigger* disperse(PlayerbotAI* ai) { return new ChatCommandTrigger(ai, "disperse"); }
 };
 
 #endif
